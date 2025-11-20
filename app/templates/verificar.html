@@ -1,82 +1,180 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Verificar Ticket</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
+        /* Reseteo básico y fuentes modernas */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
-            text-align: center;
-            padding: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         h1 {
+            font-size: 1.5rem;
             color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
+        /* Contenedor del escáner estilo "App" */
         #reader {
-            margin: 0 auto;
-            width: 300px;
-            max-width: 90%;
-            border: 4px solid #333;
-            border-radius: 10px;
-            background-color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: #000; /* Fondo negro mientras carga cámara */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+        }
+        
+        /* Ajustes para el video dentro de la librería */
+        #reader video {
+            object-fit: cover;
+            border-radius: 16px;
+        }
+
+        /* Caja de Estado (Resultado) */
+        #status-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 50px; /* Evita saltos de layout */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #resultado {
-            margin-top: 20px;
-            font-size: 20px;
-            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: inline-block;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        /* Estados con colores de fondo suaves y texto fuerte */
+        .waiting { background-color: #e4e6eb; color: #65676b; }
+        .ok { background-color: #e7f3ff; color: #1877f2; border: 2px solid #1877f2; }
+        .success-bg { background-color: #ecfdf5; color: #047857; border: 2px solid #10b981; } /* Verde verificado */
+        .error-bg { background-color: #fef2f2; color: #b91c1c; border: 2px solid #ef4444; } /* Rojo error */
+        .warn-bg { background-color: #fffbeb; color: #b45309; border: 2px solid #f59e0b; } /* Naranja usado */
+
+        /* Tarjeta de detalles */
+        #ticket-details {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: none; /* Oculto por defecto */
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #ticket-details h2 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
             color: #444;
         }
 
-        .ok { color: green; }
-        .error { color: red; }
-        .warn { color: orange; }
-
-        #ticket-details {
-            margin-top: 30px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-            text-align: left; /* Alinea el texto a la izquierda dentro del cuadro de detalles */
+        /* Filas de datos flexibles */
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
         }
 
-        #ticket-details p {
-            margin: 8px 0;
-            font-size: 16px;
+        .detail-label {
+            color: #65676b;
+            font-weight: 500;
         }
 
-        #ticket-details strong {
-            display: inline-block; /* Hace que el strong ocupe menos espacio */
-            width: 100px; /* Ancho fijo para las etiquetas, ajusta si es necesario */
+        .detail-value {
+            font-weight: 700;
+            color: #1c1e21;
+            text-align: right;
         }
+
+        /* Indicador visual de estado en la tarjeta */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
     </style>
 </head>
 <body>
-    <h1>Escanear QR del Ticket</h1>
-    <div id="reader"></div>
-    <p id="resultado"></p>
 
-    <!-- Nuevo contenedor para mostrar los detalles del ticket -->
-    <div id="ticket-details" style="display: none;">
-        <h2>Detalles del Ticket</h2>
-        <p><strong>Código:</strong> <span id="detail-code"></span></p>
-        <p><strong>Comprador:</strong> <span id="detail-buyer"></span></p>
-        <p><strong>Evento:</strong> <span id="detail-event"></span></p>
-        <p><strong>Usado:</strong> <span id="detail-usado"></span></p>
+    <h1>Verificador de Accesos</h1>
+    
+    <div id="reader"></div>
+
+    <div id="status-container">
+        <p id="resultado" class="waiting">Esperando escaneo...</p>
+    </div>
+
+    <div id="ticket-details">
+        <h2>Información del Ticket</h2>
+        
+        <div class="detail-row">
+            <span class="detail-label">Código</span>
+            <span class="detail-value" id="detail-code">---</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Comprador</span>
+            <span class="detail-value" id="detail-buyer">---</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Evento</span>
+            <span class="detail-value" id="detail-event">---</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Estado</span>
+            <span class="detail-value" id="detail-usado">---</span>
+        </div>
     </div>
 
     <script>
         function enviarTicket(ticket_id) {
+            const resultado = document.getElementById('resultado');
+            const ticketDetailsDiv = document.getElementById('ticket-details');
+            
+            // Feedback inmediato de "Cargando"
+            resultado.innerText = "Verificando...";
+            resultado.className = "waiting";
+
             fetch('/api/verificar_ticket', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -84,70 +182,86 @@
             })
             .then(response => response.json())
             .then(data => {
-                const resultado = document.getElementById('resultado');
-                const ticketDetailsDiv = document.getElementById('ticket-details');
-
+                // Limpiar clases y establecer mensaje
+                resultado.className = ""; 
                 resultado.innerText = data.message;
-                resultado.className = ""; // Limpiar clases existentes
 
-                // Limpiar detalles anteriores
-                document.getElementById('detail-code').innerText = '';
-                document.getElementById('detail-buyer').innerText = '';
-                document.getElementById('detail-event').innerText = '';
-                document.getElementById('detail-usado').innerText = '';
-                ticketDetailsDiv.style.display = 'none'; // Ocultar por defecto
+                // Limpiar UI
+                ticketDetailsDiv.style.display = 'none';
 
                 if (data.status === "ok") {
-                    resultado.classList.add("ok");
-                    // Mostrar detalles si el ticket es válido
-                    if (data.ticket_info) {
-                        document.getElementById('detail-code').innerText = data.ticket_info.ticket_code;
-                        document.getElementById('detail-buyer').innerText = data.ticket_info.buyer_name;
-                        document.getElementById('detail-event').innerText = data.ticket_info.event_name;
-                        document.getElementById('detail-usado').innerText = data.ticket_info.usado ? 'Sí' : 'No';
-                        ticketDetailsDiv.style.display = 'block'; // Mostrar el contenedor de detalles
-                    }
-                } else if (data.status === "warning") { // Manejo del nuevo status 'warning' para tickets usados
-                    resultado.classList.add("warn");
-                    if (data.ticket_info) {
-                        document.getElementById('detail-code').innerText = data.ticket_info.ticket_code;
-                        document.getElementById('detail-buyer').innerText = data.ticket_info.buyer_name;
-                        document.getElementById('detail-event').innerText = data.ticket_info.event_name;
-                        document.getElementById('detail-usado').innerText = data.ticket_info.usado ? 'Sí' : 'No';
-                        ticketDetailsDiv.style.display = 'block';
-                    }
+                    resultado.classList.add("success-bg");
+                    mostrarDetalles(data.ticket_info, "Válido");
+                } 
+                else if (data.status === "warning") {
+                    resultado.classList.add("warn-bg");
+                    mostrarDetalles(data.ticket_info, "Ya Usado");
                 }
                 else {
-                    resultado.classList.add("error");
-                    // No mostrar detalles si hay un error (ticket no encontrado)
+                    resultado.classList.add("error-bg");
                 }
             })
             .catch(error => {
-                console.error('Error al verificar ticket:', error);
-                const resultado = document.getElementById('resultado');
-                resultado.innerText = 'Error de conexión o del servidor.';
-                resultado.className = "error";
-                document.getElementById('ticket-details').style.display = 'none'; // Asegurar que se oculta en caso de error
+                console.error('Error:', error);
+                resultado.innerText = 'Error de conexión';
+                resultado.className = "error-bg";
+                ticketDetailsDiv.style.display = 'none';
             });
         }
 
+        function mostrarDetalles(info, estadoTexto) {
+            if (!info) return;
+            
+            const ticketDetailsDiv = document.getElementById('ticket-details');
+            document.getElementById('detail-code').innerText = info.ticket_code;
+            document.getElementById('detail-buyer').innerText = info.buyer_name;
+            document.getElementById('detail-event').innerText = info.event_name;
+            
+            const usadoSpan = document.getElementById('detail-usado');
+            usadoSpan.innerText = info.usado ? 'YA USADO' : 'ACTIVO';
+            
+            // Color dinámico para el texto de estado dentro de la tarjeta
+            usadoSpan.style.color = info.usado ? '#b45309' : '#047857';
+
+            ticketDetailsDiv.style.display = 'block';
+        }
+
+        // Configuración del escáner optimizada para móviles
         const scanner = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: 250 };
+        
+        // Nota: qrbox dinámico ayuda en diferentes pantallas
+        const qrBoxSize = window.innerWidth < 600 ? 250 : 300;
+
+        const config = { 
+            fps: 10, 
+            qrbox: qrBoxSize,
+            aspectRatio: 1.0 
+        };
 
         scanner.start(
             { facingMode: "environment" },
             config,
             qrCodeMessage => {
                 scanner.pause();
+                // Sonido o vibración opcional aquí si el navegador lo permite
+                if (navigator.vibrate) navigator.vibrate(200); 
+                
                 enviarTicket(qrCodeMessage);
+                
                 setTimeout(() => {
                     scanner.resume();
-                }, 3000); // Reanuda el escáner después de 3 segundos
+                    // Opcional: limpiar el mensaje de resultado al reanudar
+                    // document.getElementById('resultado').className = "waiting";
+                    // document.getElementById('resultado').innerText = "Listo para escanear";
+                }, 3000);
             },
             errorMessage => {
-                // console.log(`Error al escanear: ${errorMessage}`);
+                // Ignorar errores de lectura continua
             }
-        );
+        ).catch(err => {
+            document.getElementById('resultado').innerText = "Error cámara: " + err;
+            document.getElementById('resultado').className = "error-bg";
+        });
     </script>
 </body>
 </html>
